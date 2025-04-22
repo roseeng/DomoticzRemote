@@ -15,6 +15,7 @@ bool ConnectToWifi(String ssid, String password);
 void WiFiEvent(WiFiEvent_t event);
 void wifiInit(void);
 int pollDomoticz();
+void toggleDomoticz(int switch1or2);
 
 WiFiClient wifiClient;
 HTTPClient client;
@@ -140,7 +141,7 @@ void loop()
 
         tft.fillCircle(touch.X(), touch.Y(), 20, TFT_RED);
 
-        pollDomoticz();  
+        toggleDomoticz((touch.Y() > 150) ? 2 : 1);  
     }
 
     delay(WAIT);
@@ -183,13 +184,13 @@ void wifiInit(void)
     WiFi.mode(WIFI_AP_STA);
     WiFi.onEvent(WiFiEvent);
 
-    if (ConnectToWifi(sites[1].ssid, sites[1].password))
-    {
-        wifiSite = 1;
-    }
-    else if (ConnectToWifi(sites[0].ssid, sites[0].password))
+    if (ConnectToWifi(sites[0].ssid, sites[0].password))
     {
         wifiSite = 0;
+    }
+    else if (ConnectToWifi(sites[1].ssid, sites[1].password))
+    {
+        wifiSite = 1;
     }
     else
     {
@@ -347,5 +348,50 @@ int pollDomoticz()
   Serial.println(status);
 
   return status[1] == 'f' ? 0 : 1; 
+}
+
+void toggleDomoticz(int switch1or2)
+{
+  char switchUrl[256];
+  
+  if (wifiSite == -1)
+  {
+    Serial.println("Not yet connected.");
+    return;
+  }
+
+  int idx = (switch1or2 == 1) ? sites[wifiSite].switchIdx : sites[wifiSite].switch2Idx;
+  sprintf(switchUrl, "http://%s:%d/json.htm?type=command&param=switchlight&idx=%d&switchcmd=Toggle", sites[wifiSite].host, sites[wifiSite].port, idx);
+  Serial.printf("Calling Domoticz: %s\n", switchUrl);
+
+  client.begin(switchUrl);
+  client.addHeader("Content-Type", "application/json");
+  int statusCode = client.GET();
+  String responseBody = client.getString();
+  // client.sendBasicAuth("username", "password");
+  client.end();
+
+  if (statusCode != 200) {
+    Serial.printf("Response status: %d\n", statusCode);
+    return;
+  }
+
+  DynamicJsonDocument doc(3072);
+
+  DeserializationError error = deserializeJson(doc, responseBody);
+
+  if (error) {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+ // JsonObject result_0 = doc["message"];
+  const char* status = doc["message"];
+
+  Serial.print("Resultat: ");
+  Serial.println(status);
+
+  return; 
 }
 

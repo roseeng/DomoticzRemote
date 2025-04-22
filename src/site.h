@@ -9,10 +9,10 @@ struct Site
    String host;
    uint16_t port;
    int switchIdx;
-   int tempIdx;
+   int switch2Idx;
 };
 
 struct Site sites[2] = {
-    { Secrets::ssid1, Secrets::password1, "192.168.1.98", 80, 18, 17},
+    { Secrets::ssid1, Secrets::password1, "192.168.1.98", 80, 18, 28},
     { Secrets::ssid2, Secrets::password2, "192.168.2.50", 8080, -1, -1},
 };
